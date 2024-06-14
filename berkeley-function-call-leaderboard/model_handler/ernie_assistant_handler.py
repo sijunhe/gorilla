@@ -17,7 +17,7 @@ import os, time, json
 import requests
 
 def run_thread(assistant_id, messages, tools):
-    url = f"{os.environ["ASSISTANTS_API_HOST"]}/v1/threads/runs"
+    url = f"{os.environ['ASSISTANTS_API_HOST']}/v1/threads/runs"
     headers = {
         "appId": "123456",
         "Content-Type": "application/json"
@@ -37,8 +37,11 @@ def run_thread(assistant_id, messages, tools):
         data["metadata"]["option.allow.create.multiple.messages"] = "true"
 
     response = requests.post(url=url, headers=headers, json=data).json()
-    if "final_message" in response and response["final_message"]:
-        return response['final_message']["message"]["content"]["text"]
+    if "status" in response and response["status"] == "failed":
+        print(response, data)
+
+    if "final_answer" in response and response["final_answer"]:
+        return response['final_answer']["message"]["content"]["text"]
     elif "required_action" in response and response['required_action']:
         return response['required_action']["submit_tool_outputs"]["tool_calls"][0]["function"]
     return response
@@ -95,15 +98,16 @@ class ErnieAssistantHandler(BaseHandler):
         return decoded_output
     
     def decode_execute(self,result):
-        if "FC" not in self.model_name:
-            decoded_output = ast_parse(result)
-            execution_list = []
-            for function_call in decoded_output:
-                for key, value in function_call.items():
-                    execution_list.append(
-                        f"{key}({','.join([f'{k}={repr(v)}' for k, v in value.items()])})"
-                    )
-            return execution_list
-        else:
-            function_call = convert_to_function_call(result)
-            return function_call
+        if type(result) == dict:
+            result = [result]
+        execution_list = []
+        for function_call in result:
+            try:
+                function_name = function_call["name"]
+                function_args = function_call["arguments"]
+                execution_list.append(
+                    f"{function_name}({','.join([f'{k}={repr(v)}' for k,v in json.loads(function_args).items()])})"
+                )
+            except Exception as e:
+                print(function_call, str(e))
+        return execution_list

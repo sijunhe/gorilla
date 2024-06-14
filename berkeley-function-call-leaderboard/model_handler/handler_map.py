@@ -22,7 +22,7 @@ from model_handler.ernie_assistant_handler import ErnieAssistantHandler
 handler_map = {
     "EBT-4.0-Assistant-FC": ErnieAssistantHandler,
     "EBT-3.5-Assistant-FC": ErnieAssistantHandler,
-    "ERNIE-3.5-FC": ErnieHandler,
+    "ernie-3.5-FC": ErnieHandler,
     "gorilla-openfunctions-v0": GorillaHandler,
     "gorilla-openfunctions-v2": GorillaHandler,
     "gpt-4o-2024-05-13": OpenAIHandler,
