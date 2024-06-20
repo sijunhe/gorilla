@@ -39,11 +39,13 @@ with open(EVAL_GROUND_TRUTH_PATH, "r") as f:
 
 #### Helper functions for AST ####
 def find_description(func_descriptions, name):
+    #  [{"type": "web_search"}, {"name": "ExpertSearch", "description": "私.........
     # If func_descriptions is a list, this is the multiple or multiple_parallel case
     if type(func_descriptions) == list:
         for func_description in func_descriptions:
-            if func_description["name"] in name:
-                return func_description
+            if "name" in func_description:  # 有可能是内置函数，没有name 这个key
+                if func_description["name"] in name:
+                    return func_description
         return None
     else:
         # This is the parallel case, there is no need to loop through the list, as there is only one function
@@ -68,11 +70,11 @@ def convert_func_name(function_name, model_name: str):
 
 
 def type_checker(
-    param: str,
-    value,
-    possible_answer: list,
-    expected_type_description: str,
-    expected_type_converted,
+    param: str,  # 当前检查的 param的名字
+    value,  # 模型输出的 arg的值
+    possible_answer: list,  # ["单双曲铝单板价格"] or [[1, 2, 3]]
+    expected_type_description: str,  # arg原始定义的type，
+    expected_type_converted,  # arg原始定义的type，转换python后的type
     nested_type_converted,
 ):
     # NOTE: This type checker only supports nested type checking for one level deep.
@@ -88,7 +90,9 @@ def type_checker(
     is_variable = False
     # check for the case where a variable is used instead of a actual value.
     # use the type in possible_answer as the expected type
-    possible_answer_type = get_possible_answer_type(possible_answer)
+    possible_answer_type = get_possible_answer_type(
+        possible_answer
+    )  # -> for single item
     # if possible_answer only contains optional parameters, we can't determine the type
     if possible_answer_type != None:
         # we are being precise here.
@@ -212,10 +216,11 @@ def list_checker(param: str, model_output: list, possible_answer: list):
 
 def dict_checker(param: str, model_output: dict, possible_answers: list):
     # This function works for simple dictionaries, as well as dictionaries with nested dictionaries
-
+    # model_output: {'field': 'aaaa', 'operation': '>', 'value': '25'}
+    # possible_answers : [{'field': ['age'], 'operation': ['>'], 'value': ['25']}]
     result = {"valid": False, "error": [], "error_type": "dict_checker:unclear"}
     for i in range(len(possible_answers)):
-
+        # [{'field': [...], 'operation': [...], 'value': [...]}]
         if possible_answers[i] == "":
             continue
 
@@ -224,6 +229,7 @@ def dict_checker(param: str, model_output: dict, possible_answers: list):
         flag = True
 
         possible_answer = possible_answers[i]
+        # {'field': ['age'], 'operation': ['>'], 'value': ['25']}
         # possible_anwer is a single dictionary
         if len(model_output.keys()) != len(possible_answer.keys()):
             result["valid"] = False
@@ -233,6 +239,8 @@ def dict_checker(param: str, model_output: dict, possible_answers: list):
             continue
 
         for key, value in model_output.items():
+            # model_output: {'field': 'age', 'operation': '>', 'value': '25'}
+            # 第一轮key vale = filed, 'aaaa' from model
             if key not in possible_answer:
                 result["valid"] = False
                 result["error"].append(f"Unexpected parameter: '{key}'.")
@@ -241,34 +249,50 @@ def dict_checker(param: str, model_output: dict, possible_answers: list):
                 break
 
             expected_values = possible_answer[key]
+            # expected_values: ['age']
             if isinstance(expected_values, dict):
                 result = dict_checker(param, value, [expected_values])
                 if not result["valid"]:
                     flag = False
                     break
             else:
-                standardize_value = value
+                standardize_value = value  # 这是model的value 如 'aaa' / '>' / '25'
                 # If the value is a string, we need to standardize it
                 if type(value) == str:
-                    standardize_value = standardize_string(value)
+                    standardize_value = standardize_string(
+                        value
+                    )  # 不变，还是 'aaa' / '>' / '25'
                 # We also need to standardize the possible answers
                 standardize_possible_answer = []
-                for i in range(len(possible_answer[key])):
+                for i in range(
+                    len(possible_answer[key])
+                ):  # 当前key是field， possilbe_answer= {'field': ['age'], 'operation': ['>'], 'value': ['25']}
                     if type(possible_answer[key][i]) == str:
                         standardize_possible_answer.append(
                             standardize_string(possible_answer[key][i])
                         )
                     else:
                         standardize_possible_answer.append(possible_answer[key][i])
+                # field完事后，standardize_possible_answer= ['age'] , 只有一个value
+                # if standardize_value not in standardize_possible_answer:
+                #     result["valid"] = False
+                #     result["error"].append(
+                #         f"Invalid value for parameter {repr(key)}: {repr(value)}. Expected one of {standardize_possible_answer}."
+                #     )
+                #     result["error_type"] = "value_error:dict_value"
+                #     flag = False
+                #     break
 
-                if standardize_value not in standardize_possible_answer:
-                    result["valid"] = False
-                    result["error"].append(
-                        f"Invalid value for parameter {repr(key)}: {repr(value)}. Expected one of {standardize_possible_answer}."
-                    )
-                    result["error_type"] = "value_error:dict_value"
-                    flag = False
-                    break
+                for possible_answer_item in standardize_possible_answer:
+                    if type(standardize_value) != type(possible_answer_item):
+                        result["valid"] = False
+                        result["error"].append(
+                            f"Invalid value's type for parameter {repr(key)}: {repr(value)}. Expected one of {standardize_possible_answer}."
+                        )
+                        result["error_type"] = "value_error:dict_value's_type"
+                        flag = False
+                        break
+
         if flag:
             return {"valid": True, "error": []}
 
@@ -278,6 +302,11 @@ def dict_checker(param: str, model_output: dict, possible_answers: list):
 def list_dict_checker(param: str, model_output: list, possible_answers: list):
     # This function takes in a list of dictionaries and checks if each dictionary is valid
     # The order of the dictionaries in the list must match the order of the possible answers
+
+    # param: conditions
+    # value(model_output): [{'field': 'aaaa', 'operation': '>', 'value': '25'}, {'field': 'job', 'operation': '=', 'value': 'engineer'}]
+    # possible_answer_item[param](possible_answers:
+    #           [[{'field': ['age'], 'operation': ['>'], 'value': ['25']}, {'field': ['job'], 'operation': ['='], 'value': ['engineer']}]]
 
     result = {"valid": False, "error": [], "error_type": "list_dict_checker:unclear"}
 
@@ -295,8 +324,12 @@ def list_dict_checker(param: str, model_output: list, possible_answers: list):
         for dict_index in range(len(model_output)):
             result = dict_checker(
                 param,
-                model_output[dict_index],
-                [possible_answers[answer_index][dict_index]],
+                model_output[
+                    dict_index
+                ],  # {'field': 'aaaa', 'operation': '>', 'value': '25'}
+                [
+                    possible_answers[answer_index][dict_index]
+                ],  # [{'field': ['age'], 'operation': ['>'], 'value': ['25']}]
             )
             if not result["valid"]:
                 flag = False
@@ -308,17 +341,52 @@ def list_dict_checker(param: str, model_output: list, possible_answers: list):
 
 
 def simple_function_checker(
-    func_description: dict,
-    model_output: dict,
-    possible_answer: dict,
+    func_description_item: dict,
+    model_result_item: dict,
+    possible_answer_item: dict,
     language: str,
     model_name: str,
 ):
-    possible_answer = list(possible_answer.values())[0]
+    """
+    func_description_item,   即list of tool pool，
+    这里是simple function，只可能有一个func description，没有很多doc
+    [{"name": "ExpertSearch", "description": "私......... ,"parameters": {"type": "object", "properties": {"query": {"type": ..
+    [{'name': 'database_query', 'description': 'Query the database based on certain conditions.', 'parameters': {'type': 'dict', 'properties': {'table': {'type': 'string', 'description': 'Name of the table to query.'}, 'conditions': {'type': 'array', 'items': {'type': 'dict', 'properties': {'field': {'type': 'string', 'description': 'The field to apply the condition.'}, 'operation': {'type': 'string', 'description': 'The operation to be performed.'}, 'value': {'type': 'string', 'description': 'The value to be compared.'}}, 'required': ['field', 'operation', 'value']}, 'description': 'Conditions for the query.'}}, 'required': ['table', 'conditions']}}]
+
+    model_result_item,  上一步变成了 单个： dict，
+    {"ExpertSearch": {"query": "单双曲铝单板价格"}}
+    {'database_query': {'table': 'user', 'conditions': [{'field': 'aaaa', 'operation': '>', 'value': '25'}, {'field': 'job', 'operation': '=', 'value': 'engineer'}]}}
+
+    possible_answer_item, 不可能是内置函数，
+    # 已经从上一步转换了：{"name": "ExpertSearch", "arguments": {"query": "单双曲铝单板价格"}}
+     变成：      {"ExpertSearch": {"query": ["单双曲铝单板价格"]}
+     传入的时候是
+     {'database_query': {'table': ['user'], 'conditions': [[{'field': ['age'], 'operation': ['>'], 'value': ['25']}, {'field': ['job'], 'operation': ['='], 'value': ['engineer']}]]}}
+
+    """
     # Extract function name and parameters details
-    func_name = func_description["name"]
-    param_details = func_description["parameters"]["properties"]
-    required_params = func_description["parameters"]["required"]
+
+    ## 这里要转换一下！！！
+    # possible_answer_item = possible_answer_item["arguments"]
+    possible_answer_item = list(possible_answer_item.values())[
+        0
+    ]  # 提取 values 后： {'table': ['user'], 'conditions': [[{'field': ['age'], 'operation': ['>'], 'value': ['25']}, {'field': ['job'], 'operation': ['='], 'value': ['engineer']}]]}
+
+    # 因为是simple function ， 只会有一个true tgt function
+    if isinstance(func_description_item, list):
+        func_name = func_description_item[0]["name"]
+        param_details = func_description_item[0]["parameters"]["properties"]
+        required_params = func_description_item[0]["parameters"][
+            "required"
+        ]  # 所有能用的param：
+    else:
+        func_name = func_description_item["name"]
+        param_details = func_description_item["parameters"]["properties"]
+        required_params = func_description_item["parameters"]["required"]
+
+    # func_name = func_description_item[0]["name"]
+
+    # 所有必须的param,
 
     # Initialize a result dictionary
     result = {
@@ -329,8 +397,10 @@ def simple_function_checker(
 
     func_name = convert_func_name(func_name, model_name)
 
-    # Check if function name matches
-    if func_name not in model_output:
+    # 1. Check if function name matches
+    if (
+        func_name not in model_result_item
+    ):  # true function not in model output, infact for simple, function description is only one tool
         result["valid"] = False
         result["error"].append(
             f"Function name {repr(func_name)} not found in model output."
@@ -338,26 +408,42 @@ def simple_function_checker(
         result["error_type"] = "simple_function_checker:wrong_func_name"
         return result
 
-    model_params = model_output[func_name]
+    model_params = model_result_item[func_name]
+    # 拿出模型输出的params:{'table': 'user', 'conditions': [{'field': 'aaaa', 'operation': '>', 'value': '25'}, {'field': 'job', 'operation': '=', 'value': 'engineer'}]}
 
-    # Check for required parameters in model output
-    for param in required_params:
+    # 2. Check for required parameters in model output
+    for param in required_params:  # iterate over list of str
         if param not in model_params:
             result["valid"] = False
             result["error"].append(f"Missing required parameter: {repr(param)}.")
             result["error_type"] = "simple_function_checker:missing_required"
             return result
 
-    # Validate types and values for each parameter in model output
-    for param, value in model_params.items():
-        if param not in param_details or param not in possible_answer:
+    # 3. Validate types and values for each parameter in model output
+    for (
+        param,
+        value,
+    ) in (
+        model_params.items()
+    ):  # 模型的参数和值：{'table': 'user', 'conditions': [{'field': 'aaaa', 'operation': '>', 'value': '25'}, {'field': 'job', 'operation': '=', 'value': 'engineer'}]}
+
+        if (
+            param not in param_details or param not in possible_answer_item
+        ):  # {"query": ["单双曲铝单板价格"]
             result["valid"] = False
-            result["error"].append(f"Unexpected parameter: {repr(param)}.")
+            result["error"].append(
+                f"Unexpected parameter: {repr(param)}."
+            )  # hallucination 了， 出现了不可用的param
             result["error_type"] = "simple_function_checker:unexpected_param"
             return result
 
-        full_param_details = param_details[param]
-        expected_type_description = full_param_details["type"]  # This is a string
+        full_param_details = param_details[param]  # 拿出当前arg1的详细信息
+        # {"query": {"type": "string", "description": "搜索问题"}}
+        #  复杂： "preferences": {"type": "array", "items": {"type": "string", "enum": ["A", "T", "C", "G"]}, "description": "Preferred nucleotides to include more frequently in the DNA sequence."}
+        expected_type_description = full_param_details[
+            "type"
+        ]  # 当前arg1的定义的type ,array
+
         is_variable = False
         nested_type_converted = None
 
@@ -371,8 +457,10 @@ def simple_function_checker(
                     value = java_type_converter(
                         value, expected_type_description, nested_type
                     )
+                    print(f"after covert java NESTED_CONVERSION_TYPE_LIST: {value}")
                 else:
                     value = java_type_converter(value, expected_type_description)
+                    print(f"after covert java NOT NESTED_CONVERSION_TYPE_LIST: {value}")
 
         elif language == "JavaScript":
             expected_type_converted = JS_TYPE_CONVERSION[expected_type_description]
@@ -384,49 +472,97 @@ def simple_function_checker(
                     value = js_type_converter(
                         value, expected_type_description, nested_type
                     )
+                    print(f"after covert js NESTED_CONVERSION_TYPE_LIST: {value}")
                 else:
                     value = js_type_converter(value, expected_type_description)
+                    print(f"after covert js NOT NESTED_CONVERSION_TYPE_LIST: {value}")
 
-        elif language == "Python":
-            expected_type_converted = PYTHON_TYPE_MAPPING[expected_type_description]
+        elif language == "Python":  # 走这个
+            expected_type_converted = PYTHON_TYPE_MAPPING[
+                expected_type_description
+            ]  # 从string -> str 而已
+
             if expected_type_description in PYTHON_NESTED_TYPE_CHECK_LIST:
+                # ["array", "tuple"]， 有的param是nested
+                # {"type": "array", "items": {"type": "string"
+                # 比如"stops": {"type": "array", "items": {"type": "string"}, 这个应该是list(string)
                 nested_type = param_details[param]["items"]["type"]
-                nested_type_converted = PYTHON_TYPE_MAPPING[nested_type]
+                nested_type_converted = PYTHON_TYPE_MAPPING[
+                    nested_type
+                ]  # string -> str也转换
 
         if expected_type_description == "tuple":
-            value = list(value)
+            try:
+                value = list(value)
+            except ValueError:
+                print(
+                    f"param: {param}, the expected type for its value is tuple, but model outputed value is: {value}, cannot be converted using list()"
+                )
+                result["valid"] = False
+                result["error"].append(
+                    f"Param is: {repr(param)}, the expected type for its value is tuple, but the model outputed value is: {repr(value)}, cannot be converted using list()"
+                )
+                result["error_type"] = (
+                    "simple_function_checker:model_output_value_cannot_convert_to_list"
+                )
+                return result
 
         if expected_type_description == "float":
-            value = float(value)
+            try:
+                # print(f"before float: {value}")
+                value = float(value)
+                # print(f"after float: {value}")
+            except ValueError:
+                print(
+                    f"param: {param}, the expected type for its value is float, but model outputed value is: {value}, cannot be converted using float()"
+                )
+                result["valid"] = False
+                result["error"].append(
+                    f"Param is: {repr(param)}, the expected type for its value is float, but the model outputed value is: {repr(value)}, cannot be converted using float()"
+                )  #
+                result["error_type"] = (
+                    "simple_function_checker:model_output_value_cannot_convert_to_float"
+                )
+                return result
 
         # Type checking
         # In fact, we only check for Python here.
         # Type check for other languages are handled by the type converter, and so their value (after conversion) is always correct.
+        # 此处仅检查普通type，或者list（list）之类
         type_check_result = type_checker(
-            param,
-            value,
-            possible_answer[param],
-            expected_type_description,
-            expected_type_converted,
-            nested_type_converted,
+            param,  # model产生的每个param, conditions
+            value,  # model 产生的每个param 的值 ， 要么 简单的type 如int, float, str, bool, 要么是nested的type，如list, tuple
+            # [{'field': 'aaaa', 'operation': '>', 'value': '25'}, {'field': 'job', 'operation': '=', 'value': 'engineer'}]
+            possible_answer_item[param],  # ["单双曲铝单板价格"] or [[1, 2, 3]]
+            # [[{'field': ['age'], 'operation': ['>'], 'value': ['25']}, {'field': ['job'], 'operation': ['='], 'value': ['engineer']}]]
+            # 这个是一个list，里面是当前param所有可能的值， 比如 [10] , ['yes', ""]
+            expected_type_description,  # array
+            expected_type_converted,  #  list
+            nested_type_converted,  # dict
         )
-        is_variable = type_check_result["is_variable"]
-        if not type_check_result["valid"]:
+        is_variable = type_check_result["is_variable"]  # bool
+        if not type_check_result[
+            "valid"
+        ]:  # 某一个param 不满足了，那全都是false了 , 包括嵌套list不满足的情况
             return type_check_result
 
+        # 剩余list(dict) 没检查
         # It doesn't make sense to special handle dictionaries and list of dictionaries if the value is a variable.
         # We can just treat the variable as a string and use the normal flow.
         if not is_variable:
             # Special handle for dictionaries
             if expected_type_converted == dict:
-                result = dict_checker(param, value, possible_answer[param])
+                result = dict_checker(param, value, possible_answer_item[param])
                 if not result["valid"]:
                     return result
                 continue
 
             # Special handle for list of dictionaries
             elif expected_type_converted == list and nested_type_converted == dict:
-                result = list_dict_checker(param, value, possible_answer[param])
+                result = list_dict_checker(param, value, possible_answer_item[param])
+                # param: conditions
+                # value: [{'field': 'aaaa', 'operation': '>', 'value': '25'}, {'field': 'job', 'operation': '=', 'value': 'engineer'}]
+                # possible_answer_item[param]: [[{'field': ['age'], 'operation': ['>'], 'value': ['25']}, {'field': ['job'], 'operation': ['='], 'value': ['engineer']}]]
                 if not result["valid"]:
                     return result
                 continue
@@ -434,29 +570,30 @@ def simple_function_checker(
             # Special handle for strings
             elif expected_type_converted == str:
                 # We don't check for case sensitivity for string, as long as it's not a variable
-                result = string_checker(param, value, possible_answer[param])
+                result = string_checker(param, value, possible_answer_item[param])
                 if not result["valid"]:
                     return result
                 continue
 
-            elif expected_type_converted == list:
-                result = list_checker(param, value, possible_answer[param])
-                if not result["valid"]:
-                    return result
-                continue
+            # elif expected_type_converted == list:
+            #     result = list_checker(param, value, possible_answer_item[param])
+            #     if not result["valid"]:
+            #         return result
+            #     continue
 
         # Check if the value is within the possible answers
-        if value not in possible_answer[param]:
-            result["valid"] = False
-            result["error"].append(
-                f"Invalid value for parameter {repr(param)}: {repr(value)}. Expected one of {possible_answer[param]}."
-            )
-            result["error_type"] = "value_error:others"
-            return result
+        # if value not in possible_answer_item[param]:
+        #     result["valid"] = False
+        #     result["error"].append(
+        #         f"Invalid value for parameter {repr(param)}: {repr(value)}. Expected one of {possible_answer_item[param]}."
+        #     )
+        #     result["error_type"] = "value_error:others"
+        #     return result
 
     # Check for optional parameters not provided but allowed
-    for param in possible_answer:
-        if param not in model_params and "" not in possible_answer[param]:
+    for param in possible_answer_item:  # {"query": ["单双曲铝单板价格"]}
+        # 遍历possible_answer_item的所有key , 此处已经转换了：{"query": "单双曲铝单板价格"}
+        if param not in model_params and "" not in possible_answer_item[param]:
             result["valid"] = False
             result["error"].append(
                 f"Optional parameter {repr(param)} not provided and not marked as optional."
@@ -511,33 +648,58 @@ def parallel_function_checker_enforce_order(
 
 
 def parallel_function_checker_no_order(
-    func_descriptions: list,
-    model_output: list,
-    possible_answers: dict,
+    func_description_item: list,
+    model_result_item: list,
+    possible_answer_item: dict,  # {"ExpertSearch": {"query": ["单双曲铝单板价格"]}}；； 他想要的是 {"geometry.area_circle":{"radius":[10],"units":["","meters"]}} ，咱们不是
     language: str,
     model_name: str,
 ):
-    if len(model_output) != len(possible_answers):
+    """for multiple
+    func_description_item,  # 即list of tool pool，即使上面检查了是内置函数的possible
+    但这里tool pool 中还会带着，因为是pool 中的函数，但无所谓：
+    [{"type": "web_search"}, {"name": "ExpertSearch", "description": "私.........
+
+
+    model_result_item,  已经变成了 list of dict，这里不可能有内置函数，所以不会报错：
+    [{"ExpertSearch": {"query": "单双曲铝单板价格"}}]
+
+    possible_answer_item, 已经转换过了
+    {"ExpertSearch": {"query": ["单双曲铝单板价格"]}}
+    """
+
+    # 我们这里先转换一下
+    # possible_answer_item = {
+    #     possible_answer_item["name"]: possible_answer_item["arguments"]
+    # }
+
+    if len(model_result_item) != len(possible_answer_item):
         return {
             "valid": False,
             "error": ["Wrong number of functions."],
             "error_type": "parallel_function_checker_no_order:wrong_count",
         }
 
-    func_name_list = list(possible_answers.keys())
-    possible_answers_list = []
+    func_name_list = list(possible_answer_item.keys())  # ["ExpertSearch"]
+    possible_answer_item_list = []
 
-    for key, value in possible_answers.items():
-        possible_answers_list.append({key: value})
+    for key, value in possible_answer_item.items():
+        possible_answer_item_list.append(
+            {key: value}
+        )  # [{"ExpertSearch": {"query": ["单双曲铝单板价格"]}}]
 
     matched_indices = []
 
     # We go throught the possible answers one by one, and eliminate the model output that matches the possible answer
     # It must be this way because we need ground truth to fetch the correct function description
-    for i in range(len(possible_answers_list)):
-        func_description = find_description(func_descriptions, func_name_list[i])
 
-        # This should not happen. As possible_answers is the ground truth, and it should have the correct function name.
+    for i in range(len(possible_answer_item_list)):
+        # [{"type": "web_search"}, {"name": "ExpertSearch", "description": "私.........
+        func_description = find_description(
+            func_description_item, func_name_list[i]
+        )  # 返回的还是dict，是单个函数的description
+        # 返回 {"name": "ExpertSearch", "description": "私......... ,"parameters": {"type": "object", "properties": {"query": {"type": ..}
+
+        # This should not happen. As possible_answer_item is the ground truth, and it should have the correct function name.
         if func_description is None:
             return {
                 "valid": False,
@@ -549,14 +711,18 @@ def parallel_function_checker_no_order(
 
         all_errors = []
 
-        for index in range(len(model_output)):
+        for index in range(len(model_result_item)):
             if index in matched_indices:
                 continue
 
             result = simple_function_checker(
                 func_description,
-                model_output[index],
-                possible_answers_list[i],
+                model_result_item[
+                    index
+                ],  # {"ExpertSearch": {"query": "单双曲铝单板价格"}}
+                possible_answer_item_list[
+                    i
+                ],  # {"ExpertSearch": {"query": ["单双曲铝单板价格"]}}
                 language,
                 model_name,
             )
@@ -570,15 +736,15 @@ def parallel_function_checker_no_order(
                         f"Model Result Index {index}": {
                             "sub_error": result["error"],
                             "sub_error_type": result["error_type"],
-                            "model_output_item": model_output[index],
-                            "possible_answer_item": possible_answers_list[i],
+                            "model_result_item": model_result_item[index],
+                            "possible_answer_item": possible_answer_item_list[i],
                         }
                     }
                 )
 
         if not result["valid"]:
             considered_indices = [
-                i for i in range(len(model_output)) if i not in matched_indices
+                i for i in range(len(model_result_item)) if i not in matched_indices
             ]
             all_errors.insert(
                 0,
@@ -674,6 +840,9 @@ def executable_checker_simple(
     except NoAPIKeyError as e:
         raise e
     except Exception as e:
+        print(
+            f"Error in executable_checker_simple: {repr(function_call)}. Error: {str(e)}"
+        )
         result["valid"] = False
         result["error"].append(
             f"Error in execution: {repr(function_call)}. Error: {str(e)}"
@@ -893,27 +1062,54 @@ def executable_checker_rest(func_call, idx):
 
 
 def ast_checker(
-    func_description, model_output, possible_answer, language, test_category, model_name
+    func_description_item,
+    model_result_item,
+    possible_answer_item,
+    language,
+    test_category,
+    model_name,
 ):
+    """
+    func_description_item,  # 即list of tool pool，
+    但这里tool pool 中还可能带着内置函数，因为是pool 中的函数，但无所谓：
+    [{"type": "web_search"}, {"name": "ExpertSearch", "description": "私.........
+
+    model_result_item,  已经变成了 list of dict，这里不可能有内置函数，所以不会报错：
+    [{"ExpertSearch": {"query": "单双曲铝单板价格"}}]
+
+    possible_answer_item,
+    {"ExpertSearch": {"query": ["单双曲铝单板价格"]}}
+    """
     if "multiple" in test_category or "parallel" in test_category:
+        # multiple functions + parallel functions
         # Some formatting issues that needs to be handled
         if test_category == "parallel_function":
-            func_description = [func_description]
+            func_description_item = [func_description_item]
 
         return parallel_function_checker_no_order(
-            func_description, model_output, possible_answer, language, model_name
+            func_description_item,
+            model_result_item,
+            possible_answer_item,
+            language,
+            model_name,
         )
-
-    else:
-        if len(model_output) != 1:
+    else:  # simple function
+        if len(model_result_item) != 1:  # 就是 上面拿出来的model_result_item
             return {
                 "valid": False,
                 "error": ["Wrong number of functions."],
                 "error_type": "simple_function_checker:wrong_count",
             }
-        model_output = model_output[0]
+
+        model_result_item = model_result_item[
+            0
+        ]  # dict  -{"ExpertSearch": {"query": "单双曲铝单板价格"}}
         return simple_function_checker(
-            func_description, model_output, possible_answer, language, model_name
+            func_description_item,
+            model_result_item,
+            possible_answer_item,
+            language,
+            model_name,
         )
 
 

@@ -44,6 +44,30 @@ COLUMNS = [
 
 # Note that we don't need to substitute `_` with `/` in the model name here.
 MODEL_METADATA_MAPPING = {
+    "ernie-speed": [
+        "ernie-speed (prompt)",
+        "https://yiyan.baidu.com",
+        "Baidu",
+        "Proprietary",
+    ],
+    "ernie-series-assitant-api-FC": [
+        "ernie-series-assitant-api (FC)",
+        "https://yiyan.baidu.com",
+        "Baidu",
+        "Proprietary",
+    ],
+    "ernie-4.0": [
+        "ernie-4.0 (prompt)",
+        "https://yiyan.baidu.com",
+        "Baidu",
+        "Proprietary",
+    ],
+    "ernie-3.5-8k-0205": [
+        "ernie-3.5-8k-0205 (prompt)",
+        "https://yiyan.baidu.com",
+        "Baidu",
+        "Proprietary",
+    ],
     "ernie-3.5-FC": [
         "ernie-3.5 (FC)",
         "https://yiyan.baidu.com",
@@ -367,7 +391,7 @@ MODEL_METADATA_MAPPING = {
         "https://huggingface.co/Snowflake/snowflake-arctic-instruct",
         "Snowflake",
         "apache-2.0",
-    ]
+    ],
 }
 
 INPUT_PRICE_PER_MILLION_TOKEN = {
@@ -516,6 +540,19 @@ def is_sql(test_category):
 
 
 def load_file(file_path):
+    """
+    从指定路径的文件中读取数据，并将其转换为JSON格式列表返回。
+
+    Args:
+        file_path (str): 文件路径。
+
+    Returns:
+        List[dict]: 读取并解析后的JSON格式列表。
+
+    Raises:
+        FileNotFoundError: 如果文件不存在则抛出此异常。
+        json.JSONDecodeError: 如果文件中的数据无法解析为JSON格式则抛出此异常。
+    """
     result = []
     with open(file_path) as f:
         file = f.readlines()
@@ -539,7 +576,7 @@ def write_list_of_dicts_to_file(filename, data, subdir=None):
     # Write the list of dictionaries to the file in JSON format
     with open(filename, "w") as f:
         for i, entry in enumerate(data):
-            json_str = json.dumps(entry)
+            json_str = json.dumps(entry, ensure_ascii=False)
             f.write(json_str)
             if i < len(data) - 1:
                 f.write("\n")

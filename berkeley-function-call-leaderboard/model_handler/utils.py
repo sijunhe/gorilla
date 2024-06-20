@@ -110,7 +110,9 @@ def convert_to_tool(
                 if "maximum" in params:
                     del params["maximum"]
                 if "additionalProperties" in params:
-                    params["description"] += "The additional properties:" +str(params["additionalProperties"])
+                    params["description"] += "The additional properties:" + str(
+                        params["additionalProperties"]
+                    )
                     del params["additionalProperties"]
         if model_style == ModelStyle.COHERE:
             if USE_COHERE_OPTIMIZATION:
@@ -121,16 +123,23 @@ def convert_to_tool(
                         params["description"] = ""
 
                     if "default" in params:
-                        params["description"] += " The default value is: " + str(params["default"])
+                        params["description"] += " The default value is: " + str(
+                            params["default"]
+                        )
                         if param_name not in item["parameters"]["required"]:
                             item["parameters"]["required"].append(param_name)
                         del params["default"]
                     if "additionalProperties" in params:
-                        params["description"] += " Additional properties: " + str(params["additionalProperties"])
+                        params["description"] += " Additional properties: " + str(
+                            params["additionalProperties"]
+                        )
                         del params["additionalProperties"]
                     if "items" in params:
                         inner_type = ""
-                        if "items" in params["items"] and "type" in params["items"]["items"]:
+                        if (
+                            "items" in params["items"]
+                            and "type" in params["items"]["items"]
+                        ):
                             # 2D list
                             inner_type = params["items"]["items"]["type"]
                             params["type"] = f"list[list[{inner_type}]]"
@@ -138,7 +147,11 @@ def convert_to_tool(
                             # 1D list
                             inner_type = params["items"]["type"]
                             params["type"] = f"list[{inner_type}]"
-                        if "items" in params and "enum" in params["items"] and params["items"]["enum"]:
+                        if (
+                            "items" in params
+                            and "enum" in params["items"]
+                            and params["items"]["enum"]
+                        ):
                             params["description"] += " Possible enum values: "
                             params["description"] += ", ".join(params["items"]["enum"])
                             params["description"] += "."
@@ -149,10 +162,14 @@ def convert_to_tool(
                         for name, property_ in params["properties"].items():
                             property_type = property_.get("type", mapping["string"])
                             property_description = property_.get("description", "")
-                            params["description"] += f" {name} ({property_type}): {property_description}"
+                            params[
+                                "description"
+                            ] += f" {name} ({property_type}): {property_description}"
                         del params["properties"]
                     if "enum" in params:
-                        params["description"] += " Possible enum values: " + str(params["enum"])
+                        params["description"] += " Possible enum values: " + str(
+                            params["enum"]
+                        )
                         del params["enum"]
                     # add ranges to description
                     if "percentage" not in params["description"]:
@@ -170,16 +187,24 @@ def convert_to_tool(
                     if "description" not in params:
                         params["description"] = ""
                     if "default" in params:
-                        params["description"] += " The default value is: " + str(params["default"])
+                        params["description"] += " The default value is: " + str(
+                            params["default"]
+                        )
                         del params["default"]
                     if "additionalProperties" in params:
-                        params["description"] += " Additional properties: " + str(params["additionalProperties"])
+                        params["description"] += " Additional properties: " + str(
+                            params["additionalProperties"]
+                        )
                         del params["additionalProperties"]
                     if "items" in params:
-                        params["description"] += " List Items type: " + str(params["items"])
+                        params["description"] += " List Items type: " + str(
+                            params["items"]
+                        )
                         del params["items"]
                     if "properties" in params:
-                        params["description"] += " Dictionary properties: " + str(params["properties"])
+                        params["description"] += " Dictionary properties: " + str(
+                            params["properties"]
+                        )
                         del params["properties"]
         if model_style in [
             ModelStyle.Anthropic_Prompt,
@@ -311,7 +336,7 @@ def resolve_ast_by_type(value):
     elif isinstance(value, ast.Name):
         output = value.id
     elif isinstance(value, ast.Call):
-        if len(value.keywords)==0:
+        if len(value.keywords) == 0:
             output = ast.unparse(value)
         else:
             output = resolve_ast_call(value)
@@ -345,8 +370,9 @@ def language_specific_pre_processing(function, test_category, string_param):
     if type(function) is dict:
         function = [function]
     if len(function) == 0:
-       return function
+        return function
     for item in function:
+        # 一旦遇到第一个item, 就会return, 所以只会处理第一个item,
         properties = item["parameters"]["properties"]
         if test_category == "java":
             for key, value in properties.items():
@@ -371,7 +397,7 @@ def language_specific_pre_processing(function, test_category, string_param):
                         + value["type"]
                         + " in string representation."
                     )
-        return function
+        return function  # 单纯返回一个单纯返回一个List(Dict), 如果上面逻辑不执行，还是返回List[原来的Dict for function]
 
 
 def construct_tool_use_system_prompt(tools):
