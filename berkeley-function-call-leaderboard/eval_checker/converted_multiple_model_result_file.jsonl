@@ -1,0 +1,12 @@
+{"result": {"name": "web_search"}}
+{"result": {"name": "ExpertSearch", "arguments": {"query": "单双曲铝单板价格"}}}
+{"result": {"name": "web_search"}}
+{"result": {"name": "ExpertSearch", "arguments": {"query": "单双曲铝单板价格"}}}
+{"result": {}}
+{"result": {"name": "web_search"}}
+{"result": {}}
+{"result": {"name": "database_query", "arguments": {"table": "user", "conditions": [{"field": "age", "operation": ">", "value": "25"}, {"field": "job", "operation": "=", "value": "engineer"}]}}}
+{"result": {"name": "database_query", "arguments": {"table": "user", "conditions": [{"field": "age", "operation": ">", "value": "25"}, {"field": "job", "operation": "=", "value": "engineer"}]}}}
+{"result": {"name": "abab", "arguments": {"table": "user", "conditions": [{"field": "age", "operation": ">", "value": "25"}, {"field": "job", "operation": "=", "value": "engineer"}]}}}
+{"result": {"name": "database_query", "arguments": {"table": 78, "conditions": [{"field": "age", "operation": ">", "value": "25"}, {"field": "job", "operation": "=", "value": "engineer"}]}}}
+{"result": {"name": "database_query", "arguments": {"table": "user", "conditions": ["strt", "strt222"]}}}

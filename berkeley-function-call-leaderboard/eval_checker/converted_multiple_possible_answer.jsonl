@@ -1,0 +1,12 @@
+{"name": "web_search"}
+{"name": "ExpertSearch", "arguments": {"query": ["单双曲铝单板价格"]}}
+{"name": "ExpertSearch", "arguments": {"query": ["单双曲铝单板价格"]}}
+{"name": "web_search"}
+{"name": "web_search"}
+{}
+{}
+{"name": "database_query", "arguments": {"table": ["user"], "conditions": [[{"field": ["age"], "operation": [">"], "value": ["25"]}, {"field": ["job"], "operation": ["="], "value": ["engineer"]}]]}}
+{"name": "database_query", "arguments": {"table": ["user"], "conditions": [[{"field": ["age"], "operation": [">"], "value": ["25"]}, {"field": ["job"], "operation": ["="], "value": ["engineer"]}]]}}
+{"name": "database_query", "arguments": {"table": ["user"], "conditions": [[{"field": ["age"], "operation": [">"], "value": ["25"]}, {"field": ["job"], "operation": ["="], "value": ["engineer"]}]]}}
+{"name": "database_query", "arguments": {"table": ["user"], "conditions": [[{"field": ["age"], "operation": [">"], "value": ["25"]}, {"field": ["job"], "operation": ["="], "value": ["engineer"]}]]}}
+{"name": "database_query", "arguments": {"table": ["user"], "conditions": [[{"field": ["age"], "operation": [">"], "value": ["25"]}, {"field": ["job"], "operation": ["="], "value": ["engineer"]}]]}}

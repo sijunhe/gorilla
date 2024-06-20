@@ -23,21 +23,44 @@ def get_args():
     return args
 
 
+# original test categories:
+
+# test_categories = {
+#     "executable_simple": "gorilla_openfunctions_v1_test_executable_simple.json",
+#     "executable_parallel_function": "gorilla_openfunctions_v1_test_executable_parallel_function.json",
+#     "executable_multiple_function": "gorilla_openfunctions_v1_test_executable_multiple_function.json",
+#     "executable_parallel_multiple_function": "gorilla_openfunctions_v1_test_executable_parallel_multiple_function.json",
+#     "simple": "gorilla_openfunctions_v1_test_simple.json",
+#     "relevance": "gorilla_openfunctions_v1_test_relevance.json",
+#     "parallel_function": "gorilla_openfunctions_v1_test_parallel_function.json",
+#     "multiple_function": "gorilla_openfunctions_v1_test_multiple_function.json",
+#     "parallel_multiple_function": "gorilla_openfunctions_v1_test_parallel_multiple_function.json",
+#     "java": "gorilla_openfunctions_v1_test_java.json",
+#     "javascript": "gorilla_openfunctions_v1_test_javascript.json",
+#     "rest": "gorilla_openfunctions_v1_test_rest.json",
+#     "sql": "gorilla_openfunctions_v1_test_sql.json",
+# }
 test_categories = {
     "executable_simple": "gorilla_openfunctions_v1_test_executable_simple.json",
-    "executable_parallel_function": "gorilla_openfunctions_v1_test_executable_parallel_function.json",
     "executable_multiple_function": "gorilla_openfunctions_v1_test_executable_multiple_function.json",
-    "executable_parallel_multiple_function": "gorilla_openfunctions_v1_test_executable_parallel_multiple_function.json",
     "simple": "gorilla_openfunctions_v1_test_simple.json",
     "relevance": "gorilla_openfunctions_v1_test_relevance.json",
-    "parallel_function": "gorilla_openfunctions_v1_test_parallel_function.json",
     "multiple_function": "gorilla_openfunctions_v1_test_multiple_function.json",
-    "parallel_multiple_function": "gorilla_openfunctions_v1_test_parallel_multiple_function.json",
-    "java": "gorilla_openfunctions_v1_test_java.json",
-    "javascript": "gorilla_openfunctions_v1_test_javascript.json",
-    "rest": "gorilla_openfunctions_v1_test_rest.json",
-    "sql": "gorilla_openfunctions_v1_test_sql.json",
 }
+
+
+# suitibale for Ernie's categories
+# test_categories = {
+#     "executable_simple": "gorilla_openfunctions_v1_test_executable_simple.json",
+#     "executable_multiple_function": "gorilla_openfunctions_v1_test_executable_multiple_function.json",
+#     "simple": "gorilla_openfunctions_v1_test_simple.json",
+#     "multiple_function": "gorilla_openfunctions_v1_test_multiple_function.json",
+#     "relevance": "gorilla_openfunctions_v1_test_relevance.json",
+#     "java": "gorilla_openfunctions_v1_test_java.json",
+#     "javascript": "gorilla_openfunctions_v1_test_javascript.json",
+#     "rest": "gorilla_openfunctions_v1_test_rest.json",
+#     "sql": "gorilla_openfunctions_v1_test_sql.json",
+# }
 
 
 def build_handler(model_name, temperature, top_p, max_tokens):
@@ -68,7 +91,7 @@ if __name__ == "__main__":
         )
         for res in result[0]:
             handler.write(res, "result.json")
-    else:
+    else:  # 非开源模型走这里!here here
         test_cate, files_to_open = load_file(args.test_category)
         for test_category, file_to_open in zip(test_cate, files_to_open):
             print("Generating: " + file_to_open)
@@ -95,11 +118,20 @@ if __name__ == "__main__":
                 if index < num_existing_result:
                     continue
                 user_question, functions = test_case["question"], test_case["function"]
+                # function是个dict一般来说
                 if type(functions) is dict or type(functions) is str:
-                    functions = [functions]
+                    functions = [functions]  # 变成List[Dict]形式
                 result, metadata = handler.inference(
                     user_question, functions, test_category
                 )
+
+                # result: dict for ernie, list for openai
+                # ernie: {'name': 'get_current_temperature',
+                #       'thoughts': '用户想知道深圳市今天的温度，我可以使用get_current_temperature工具来获取信息。',
+                #         'arguments': '{"location":"深圳","unit":"摄氏度"}'}
+
+                # openai: 直接是function name 和argument的value，没用个name、arugment key， [{'func1': "{'arg1': 'val1', 'arg2': 'val2'}""}, {'func2': "{'arg1': 'val1'}"}]
+
                 result_to_write = {
                     "idx": index,
                     "result": result,

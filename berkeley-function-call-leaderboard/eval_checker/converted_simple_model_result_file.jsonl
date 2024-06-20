@@ -1,0 +1,16 @@
+{"result": {"name": "ExpertSearch", "arguments": {"query": "单双曲铝单板价格"}}}
+{"result": {"name": "ExpertSearch", "arguments": {"query": "单双曲铝单板价格"}}}
+{"result": {}}
+{"result": {"name": "web_search"}}
+{"result": {"name": "web_search"}}
+{"result": {"name": "calculate_fitness", "arguments": {"trait_values": [0.8, 0.7], "trait_contributions": [0.4, 0.6]}}}
+{"result": {"name": "calculate_fitness", "arguments": {"trait_values": [0.8, 0.7], "trait_contributions": [0.4, 0.6]}}}
+{"result": {"name": "calculate_fitness", "arguments": {"trait_values": ["0.8", "0.7"], "trait_contributions": ["0.4", "0.6"]}}}
+{"result": {"name": "run_linear_regression", "arguments": {"predictors": ["Age", "Income", "Education"], "target": "Purchase_Amount"}}}
+{"result": {"name": "run_linear_regression", "arguments": {"predictors": ["Age", "Income"], "target": "Purchase_Amount"}}}
+{"result": {"name": "run_linear_regression", "arguments": {"predictors": "Age", "target": "Purchase_Amount"}}}
+{"result": {"name": "run_linear_regression", "arguments": {"predictors": ["Age", "Income", "Education"]}}}
+{"result": {"name": "database_query", "arguments": {"table": "user", "conditions": [{"field": "age", "operation": ">", "value": "25"}, {"field": "job", "operation": "=", "value": "engineer"}]}}}
+{"result": {"name": "database_query", "arguments": {"table": "user", "conditions": [{"field": "age", "operation": ">", "value": "25"}]}}}
+{"result": {"name": "database_query", "arguments": {"table": "user", "conditions": [{"field": "aaaa", "operation": ">", "value": "25"}, {"field": "job", "operation": "=", "value": "engineer"}]}}}
+{"result": {"name": "database_query", "arguments": {"table": "user", "conditions": [{"field": "age", "operation": ">", "value": 25}, {"field": "job", "operation": "=", "value": "engineer"}]}}}
