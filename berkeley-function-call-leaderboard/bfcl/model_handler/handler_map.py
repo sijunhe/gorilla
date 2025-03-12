@@ -15,6 +15,7 @@ from bfcl.model_handler.api_inference.nvidia import NvidiaHandler
 from bfcl.model_handler.api_inference.openai import OpenAIHandler
 from bfcl.model_handler.api_inference.writer import WriterHandler
 from bfcl.model_handler.api_inference.yi import YiHandler
+from bfcl.model_handler.api_inference.ernie import ErnieHandler
 from bfcl.model_handler.local_inference.bielik import BielikHandler
 from bfcl.model_handler.local_inference.deepseek import DeepseekHandler
 from bfcl.model_handler.local_inference.deepseek_coder import DeepseekCoderHandler
@@ -34,6 +35,7 @@ from bfcl.model_handler.local_inference.quick_testing_oss import QuickTestingOSS
 from bfcl.model_handler.local_inference.qwen import QwenHandler
 from bfcl.model_handler.local_inference.salesforce import SalesforceHandler
 from bfcl.model_handler.local_inference.falcon_fc import Falcon3FCHandler
+
 
 # TODO: Add meta-llama/Llama-3.1-405B-Instruct
 
@@ -105,6 +107,7 @@ api_inference_handler_map = {
     # "yi-large-fc": YiHandler,  #  Their API is under maintenance, and will not be back online in the near future
     "palmyra-x-004": WriterHandler,
     "grok-beta": GrokHandler,
+    "ErnieBot/x1": ErnieHandler,
 }
 
 # Inference through local hosting

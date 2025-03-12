@@ -8,6 +8,12 @@ from bfcl.model_handler.handler_map import local_inference_handler_map
 #     model_license,
 # ]}
 MODEL_METADATA_MAPPING = {
+    "ErnieBot/x1": [
+        "ErnieBot/x1",
+        "https://yiyan.baidu.com/",
+        "Baidu Ernie",
+        "Proprietary",
+    ],
     "gorilla-openfunctions-v2": [
         "Gorilla-OpenFunctions-v2 (FC)",
         "https://gorilla.cs.berkeley.edu/blogs/7_open_functions_v2.html",

@@ -159,4 +159,5 @@ UNDERSCORE_TO_DOT = [
     "yi-large-fc",
     "openbmb/MiniCPM3-4B-FC",
     "grok-beta",
+    "ErnieBot/x1"
 ]

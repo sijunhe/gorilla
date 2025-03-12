@@ -8,6 +8,7 @@ from bfcl.constant import TEST_COLLECTION_MAPPING, TEST_FILE_MAPPING, VERSION_PR
 
 
 def extract_test_category(input_string: Union[str, Path]) -> str:
+    print(input_string)
     input_string = str(input_string)
     pattern = rf".*{VERSION_PREFIX}_(\w+?)(?:_score|_result)?\.json"
     match = re.search(pattern, input_string)
